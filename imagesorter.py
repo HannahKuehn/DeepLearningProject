@@ -5,6 +5,9 @@ infotext = 'annotations/trainval.txt'
 
 file1 = open(infotext, 'r')
 Lines = file1.readlines()
+split = len(Lines)
+i = 0
+print(split)
 
 for l in Lines:
     s = l.split()
@@ -12,4 +15,8 @@ for l in Lines:
         species = 'dog/'
     else:
         species = 'cat/'
-    os.rename(topfolder + s[0] + '.jpg', 'sortedimages/' + species + s[0] + '.jpg')
+    if i < 2700:
+        os.rename(topfolder + s[0] + '.jpg', 'sortedimages/train/' + species + s[0] + '.jpg')
+    else:
+        os.rename(topfolder + s[0] + '.jpg', 'sortedimages/val/' + species + s[0] + '.jpg')
+    i =i+1
