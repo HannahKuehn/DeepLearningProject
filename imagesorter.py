@@ -1,4 +1,5 @@
 import os
+import random
 
 topfolder = 'images/'
 infotext = 'annotations/trainval.txt'
@@ -19,7 +20,7 @@ for i in range(37):
 for idx,l in enumerate(Lines):
     s = l.split()
     breed = str(s[1])+"/"
-    if idx%11 == 0:
+    if random.random() > 0.8:
         os.rename(topfolder + s[0] + '.jpg', 'sortedimages/val/' + breed + s[0] + '.jpg')
     else:
         os.rename(topfolder + s[0] + '.jpg', 'sortedimages/train/' + breed + s[0] + '.jpg')
