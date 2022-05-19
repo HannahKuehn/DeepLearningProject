@@ -109,7 +109,7 @@ def test_model(model, dataloaders, criterion, optimizer):
                 # forward
                 # track history if only in train
                 
-       	outputs = model(inputs)
+        outputs = model(inputs)
         loss = criterion(outputs, labels)
 
         _, preds = torch.max(outputs, 1)
@@ -201,22 +201,22 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
 
 def set_parameter_requires_grad(model, feature_extracting):
-	if feature_extracting:
-		for name,param in model.named_parameters():
-			if veryfinetune:
-				for layername in finetunenames:
-					if name.startswith(layername):
-						param.requires_grad = True
-						break
-					else:
-						param.requires_grad = False
-			else:
-				param.requires_grad = False
+    if feature_extracting:
+        for name,param in model.named_parameters():
+            if veryfinetune:
+                for layername in finetunenames:
+                    if name.startswith(layername):
+                        param.requires_grad = True
+                        break
+                    else:
+                        param.requires_grad = False
+            else:
+                param.requires_grad = False
 
 
 def printLayers(model_ft):
-	for name,param in model_ft.named_parameters():
-		print("\t",name)
+    for name,param in model_ft.named_parameters():
+        print("\t",name)
 
 def initialize_model(model_name, num_classes, feature_extract, use_pretrained=True):
     # Initialize these variables which will be set in this if statement. Each of these
@@ -237,72 +237,82 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 # Train and evaluate
 
 if __name__ == "__main__":
-	model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
-	print(model_ft)
-	
-	data_transforms = {
-	    'train': transforms.Compose([
-	        transforms.RandomResizedCrop(input_size),
-	        #transforms.RandomHorizontalFlip(),
-	        #transforms.GaussianBlur(9),
-	        #transforms.ToTensor(),
-	        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-	        transforms.RandomErasing()
-	    ]),
-	    'val': transforms.Compose([
-	        transforms.Resize(input_size),
-	        transforms.CenterCrop(input_size),
-	        transforms.ToTensor(),
-	        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-	    ]),
-	    'test': transforms.Compose([
-	        transforms.Resize(input_size),
-	        transforms.CenterCrop(input_size),
-	        transforms.ToTensor(),
-	        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-	    ]),
-	}
+    model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
+    print(model_ft)
+    
+    data_transforms = {
+        'train': transforms.Compose([
+            transforms.RandomResizedCrop(input_size),
+            #transforms.RandomHorizontalFlip(),
+            #transforms.GaussianBlur(9),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            transforms.RandomErasing()
+        ]),
+        'val': transforms.Compose([
+            transforms.Resize(input_size),
+            transforms.CenterCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+        'test': transforms.Compose([
+            transforms.Resize(input_size),
+            transforms.CenterCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+    }
 
-	print("Initializing Datasets and Dataloaders...")
+    print("Initializing Datasets and Dataloaders...")
 
-	# Create training and validation datasets
-	image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'val','test']}
-	# Create training and validation dataloaders
-	dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'val','test']}
+    # Create training and validation datasets
+    image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'val','test']}
+    # Create training and validation dataloaders
+    dataloaders_dict = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in ['train', 'val','test']}
 
 
 
-	# Detect if we have a GPU available
-	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # Detect if we have a GPU available
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-	print(torch.cuda.is_available())
+    print(torch.cuda.is_available())
 
-	model_ft = model_ft.to(device)
+    model_ft = model_ft.to(device)
 
-	print("All parameters:")
-	printLayers(model_ft)
-	params_to_update = model_ft.parameters()
-	print("Params to learn:")
-	if feature_extract:
-		params_to_update = []
-		for name,param in model_ft.named_parameters():
-			
-		    if param.requires_grad == True:
-		        params_to_update.append(param)
-		       	print("\t",name)
-	else:
-	    for name,param in model_ft.named_parameters():
-	        if param.requires_grad == True:
-	            print("\t",name)
+    print("All parameters:")
+    printLayers(model_ft)
+    params_to_update = model_ft.parameters()
+    bn_params = []
+    print("Params to learn:")
+    if feature_extract:
+        params_to_update = []
+        for name,param in model_ft.named_parameters():
+            if param.requires_grad == True:
+                print("\t",name)
+                if "bn"  in name:
+                    bn_params.append(param)
+                else:
+                    params_to_update.append(param)
+    else:
+        for name,param in model_ft.named_parameters():
+            if param.requires_grad == True:
+                print("\t",name)
+                if "bn"  in name:
+                    bn_params.append(param)
+    # Observe that all parameters are being optimized
+    #optimizer_ft = optim.Adam(params_to_update, lr=0.001)
+    optimizer_ft = optim.Adam(params_to_update)
+    optim.SGD([
+                {'params': bn_params},
+                {'params': params_to_update, 'lr': 1e-3}
+            ], lr=1e-2, momentum=0.9)
 
-	# Observe that all parameters are being optimized
-	#optimizer_ft = optim.Adam(params_to_update, lr=0.001)
-	optimizer_ft = optim.Adam(params_to_update)
+    #optimizer_ft = optim.Adam(params_to_update)
 
-	criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss()
 
-	model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=False)
-	model_ft.eval()
-	print(test_model(model_ft,dataloaders_dict,criterion,optimizer_ft).item())
+    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=False)
+    model_ft.eval()
+    print(test_model(model_ft,dataloaders_dict,criterion,optimizer_ft).item())
 
 
