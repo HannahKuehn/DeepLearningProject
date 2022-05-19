@@ -243,9 +243,11 @@ if __name__ == "__main__":
 	data_transforms = {
 	    'train': transforms.Compose([
 	        transforms.RandomResizedCrop(input_size),
-	        transforms.RandomHorizontalFlip(),
-	        transforms.ToTensor(),
-	        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+	        #transforms.RandomHorizontalFlip(),
+	        #transforms.GaussianBlur(9),
+	        #transforms.ToTensor(),
+	        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+	        transforms.RandomErasing()
 	    ]),
 	    'val': transforms.Compose([
 	        transforms.Resize(input_size),
@@ -295,7 +297,7 @@ if __name__ == "__main__":
 
 	# Observe that all parameters are being optimized
 	#optimizer_ft = optim.Adam(params_to_update, lr=0.001)
-	optimizer_ft = optim.Adagrad(params_to_update)
+	optimizer_ft = optim.Adam(params_to_update)
 
 	criterion = nn.CrossEntropyLoss()
 
