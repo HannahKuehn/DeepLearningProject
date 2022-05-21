@@ -85,18 +85,13 @@ num_epochs = 10
 
 veryfinetune = True
 
-finetunenames = ["layer4.1.bn"]
+finetunenames = ["layer4.1.bn2", "layer4.1.conv2"]
 
 # Flag for feature extracting. When False, we finetune the whole model, 
 #   when True we only update the reshaped layer params
 feature_extract = True
 
 def test_model(model, dataloaders, criterion, optimizer):
-    best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
-
-    running_loss = 0.0
-    running_corrects = 0
 
             # Iterate over data.
     for inputs, labels in dataloaders['test']:
@@ -110,17 +105,12 @@ def test_model(model, dataloaders, criterion, optimizer):
                 # track history if only in train
                 
         outputs = model(inputs)
-        loss = criterion(outputs, labels)
 
         _, preds = torch.max(outputs, 1)
 
-                # statistics
-        running_loss += loss.item() * inputs.size(0)
+    
         running_corrects += torch.sum(preds == labels.data)
 
-
-    # load best model weights
-    model.load_state_dict(best_model_wts)
     acc = running_corrects.double()/len(dataloaders['test'].dataset)
     return acc
 
@@ -163,9 +153,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                     #   but in testing we only consider the final output.
                     
                     outputs = model(inputs)
+                    _, preds = torch.max(outputs, 1)
                     loss = criterion(outputs, labels)
 
-                    _, preds = torch.max(outputs, 1)
+                   
 
                     # backward + optimize only if in training phase
                     if phase == 'train':
@@ -223,7 +214,8 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
     #   variables is model specific.
     model_ft = None
     input_size = 0
-
+    
+    ########## pretrained model #############
     model_ft = models.resnet18(pretrained=use_pretrained)
     set_parameter_requires_grad(model_ft, feature_extract)
     num_ftrs = model_ft.fc.in_features
@@ -239,12 +231,12 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 if __name__ == "__main__":
     model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
     print(model_ft)
-    
+    ######## data transformation and augmentation #########
     data_transforms = {
         'train': transforms.Compose([
             transforms.RandomResizedCrop(input_size),
-            #transforms.RandomHorizontalFlip(),
-            #transforms.GaussianBlur(9),
+            transforms.RandomHorizontalFlip(),
+            #transforms.GaussianBlur(1.5),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             transforms.RandomErasing()
@@ -288,28 +280,37 @@ if __name__ == "__main__":
         params_to_update = []
         for name,param in model_ft.named_parameters():
             if param.requires_grad == True:
-                print("\t",name)
                 if "bn"  in name:
                     bn_params.append(param)
+                    print("\t bn",name)
                 else:
                     params_to_update.append(param)
+                    print("\t other",name)
     else:
         for name,param in model_ft.named_parameters():
             if param.requires_grad == True:
                 print("\t",name)
                 if "bn"  in name:
                     bn_params.append(param)
-    # Observe that all parameters are being optimized
-    #optimizer_ft = optim.Adam(params_to_update, lr=0.001)
-    optimizer_ft = optim.Adam(params_to_update)
-    optim.SGD([
-                {'params': bn_params},
+   
+    #### OPTIMIZER AND LEARNING RATES #########
+
+   # optimizer_ft = optim.Adam(params_to_update, lr=0.001)
+    optimizer_ft = optim.SGD([
+              {'params': bn_params},
                 {'params': params_to_update, 'lr': 1e-3}
             ], lr=1e-2, momentum=0.9)
 
-    #optimizer_ft = optim.Adam(params_to_update)
+   # optimizer_ft = optim.Adagrad([
+      #          {'params': bn_params},
+        #        {'params': params_to_update, 'lr': 1e-3}
+        #    ], lr=1e-2)
 
-    criterion = nn.CrossEntropyLoss()
+
+
+    ####### LOSS FUNCTION ############
+    criterion = nn.MultiMarginLoss()
+    #criterion = nn.CrossEntropyLoss()
 
     model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs, is_inception=False)
     model_ft.eval()
