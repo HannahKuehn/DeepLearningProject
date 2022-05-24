@@ -76,27 +76,27 @@ data_dir = "sortedimages"
 model_name = "resnet"
 
 # Number of classes in the dataset
-num_classes = 37
+num_classes = 2
 
 # Batch size for training (change depending on how much memory you have)
 batch_size = 8
 
 # Number of epochs to train for 
-num_epochs = 1
+num_epochs = 10
 
 veryfinetune = True
 
-finetunenames = ["layer4"]
+finetunenames = ["fc"]
 
-trainacc = []
-valacc = []
+trainloss = []
+#validationloss = []
 
 # Flag for feature extracting. When False, we finetune the whole model, 
 #   when True we only update the reshaped layer params
 feature_extract = True
 
 def test_model(model, dataloaders, criterion, optimizer):
-    running_corrects = 0
+
             # Iterate over data.
     for inputs, labels in dataloaders['test']:
         inputs = inputs.to(device)
@@ -169,7 +169,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                         optimizer.step()
 
                 # statistics
-                
+                if phase == 'train':
+                    c += 1
+                    if c%100 == 0:
+                        trainloss.append(loss.item())
 
                 
                 running_loss += loss.item() * inputs.size(0)
@@ -177,11 +180,6 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
-
-            if phase == 'train':
-                trainacc.append(epoch_acc)
-            else:
-                valacc.append(epoch_acc)
 
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
@@ -198,12 +196,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
 
-    plt.plot(trainacc)
-    plt.plot(valacc)
-    plt.legend(['train', 'validation'])
-    plt.title('training and validation accuracy')
-    plt.xlabel('epochs')
-    plt.ylabel('accuracy')
+    plt.plot(trainloss)
+    plt.title('training loss')
+    plt.xlabel('100th update step')
+    plt.ylabel('loss')
     plt.show()
     c = 0
     # load best model weights
@@ -257,10 +253,8 @@ if __name__ == "__main__":
         'train': transforms.Compose([
             transforms.RandomResizedCrop(input_size),
             transforms.RandomHorizontalFlip(),
-            #transforms.GaussianBlur(1.5),
             transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-            transforms.RandomErasing()
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
             transforms.Resize(input_size),
@@ -317,11 +311,11 @@ if __name__ == "__main__":
     #### OPTIMIZER AND LEARNING RATES #########
 
    # optimizer_ft = optim.Adam(params_to_update, lr=0.001)
-    optimizer_ft = optim.SGD([
-              {'params': bn_params},
-                {'params': params_to_update, 'lr': 1e-3}
-            ], lr=1e-2, momentum=0.9)
-
+   # optimizer_ft = optim.SGD([
+    #          {'params': bn_params},
+     #           {'params': params_to_update, 'lr': 1e-3}
+      #      ], lr=1e-2, momentum=0.9)
+    optimizer_ft = optim.SGD(params_to_update, lr = 1e-3, momentum=0.9)
    # optimizer_ft = optim.Adagrad([
       #          {'params': bn_params},
         #        {'params': params_to_update, 'lr': 1e-3}
